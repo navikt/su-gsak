@@ -34,6 +34,10 @@ dependencies {
     implementation("io.micrometer:micrometer-registry-prometheus:$micrometerRegistryPrometheusVersion")
     implementation("org.apache.kafka:kafka-streams:2.3.0")
 
+    testImplementation("io.ktor:ktor-server-test-host:$ktorVersion") {
+        exclude(group = "junit")
+        exclude(group = "org.eclipse.jetty") // conflicts with WireMock
+    }
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion")

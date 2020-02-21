@@ -1,7 +1,7 @@
 FROM navikt/java:12
 
 COPY init-scripts/* /init-scripts/
-COPY core/build/libs/*.jar ./
+COPY build/libs/*.jar ./
 
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 \
                -XX:+HeapDumpOnOutOfMemoryError \

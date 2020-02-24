@@ -18,6 +18,7 @@ repositories {
 val ktorVersion = "1.2.6"
 val junitJupiterVersion = "5.6.0-M1"
 val fuelVersion = "2.2.1"
+val wireMockVersion = "2.23.2"
 val orgJsonVersion = "20180813"
 val micrometerRegistryPrometheusVersion = "1.3.2"
 
@@ -41,6 +42,9 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion")
+    testImplementation("com.github.tomakehurst:wiremock:$wireMockVersion") {
+        exclude(group = "junit")
+    }
     testImplementation("com.opentable.components:otj-pg-embedded:0.13.3")
     testImplementation("no.nav:kafka-embedded-env:2.2.3")
 }

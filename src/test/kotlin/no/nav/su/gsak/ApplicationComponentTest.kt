@@ -8,19 +8,22 @@ import io.ktor.http.HttpHeaders.Authorization
 import io.ktor.http.HttpStatusCode.Companion.Created
 import io.ktor.server.testing.withTestApplication
 import io.ktor.util.KtorExperimentalAPI
+import no.nav.su.gsak.EmbeddedKafka.Companion.kafkaConsumer
 import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
+import no.nav.su.meldinger.kafka.MessageBuilder.Companion.compatible
+import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
+import no.nav.su.meldinger.kafka.headersAsString
+import no.nav.su.meldinger.kafka.soknad.NySoknad
+import no.nav.su.meldinger.kafka.soknad.NySoknadHentGsak
 import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringSerializer
-import org.json.JSONObject
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration.of
-import java.time.temporal.ChronoUnit
+import java.time.temporal.ChronoUnit.MILLIS
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 
@@ -74,14 +77,12 @@ class ApplicationComponentTest {
                     """.trimIndent()))
             )
 
-            producer.send(ProducerRecord(SOKNAD_TOPIC, """
-                {
-                    "aktoerId":"$aktoerId",
-                    "soknadId":"$soknadId",
-                    "sakId":"$sakId",
-                    "soknad": {}
-                }
-            """.trimIndent()))
+            producer.send(toProducerRecord(SOKNAD_TOPIC, NySoknad(
+                    sakId = sakId,
+                    aktoerId = aktoerId,
+                    soknadId = soknadId,
+                    soknad = """{}"""
+            ), mapOf("X-Correlation-ID" to "abcdef")))
 
             Thread.sleep(2000)
 
@@ -89,12 +90,12 @@ class ApplicationComponentTest {
             verify(exactly(1), getRequestedFor(urlPathEqualTo("/saker")))
             verify(exactly(1), postRequestedFor(urlPathEqualTo("/saker")))
 
-            val records = EmbeddedKafka.kafkaConsumer.poll(of(100, ChronoUnit.MILLIS)).records(SOKNAD_TOPIC)
+            val records = kafkaConsumer.poll(of(100, MILLIS)).records(SOKNAD_TOPIC)
             assertEquals(2, records.count())
-            val consumed = JSONObject(records.first().value())
-            assertFalse(consumed.has("gsakId"))
-            val produced = JSONObject(records.last().value())
-            assertTrue(produced.has("gsakId"))
+            assertTrue(compatible(records.first(), NySoknad::class.java))
+            assertEquals("abcdef", records.first().headersAsString()["X-Correlation-ID"])
+            assertTrue(compatible(records.last(), NySoknadHentGsak::class.java))
+            assertEquals("abcdef", records.last().headersAsString()["X-Correlation-ID"])
         }
     }
 

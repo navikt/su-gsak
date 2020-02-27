@@ -10,6 +10,7 @@ import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.compatible
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.fromConsumerRecord
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
+import no.nav.su.meldinger.kafka.headersAsString
 import no.nav.su.meldinger.kafka.soknad.NySoknad
 import no.nav.su.meldinger.kafka.soknad.NySoknadHentGsak
 import no.nav.su.person.sts.StsConsumer
@@ -61,7 +62,7 @@ internal fun Application.sugsak(
                 val records: ConsumerRecords<String, String> = kafkaConsumer.poll(of(100, MILLIS))
                 records.filter { compatible(it, NySoknad::class.java) }
                         .map {
-                            LOG.info("Polled event: topic:${it.topic()}, key:${it.key()}, value:${it.value()}")
+                            LOG.info("Polled event: topic:${it.topic()}, key:${it.key()}, value:${it.value()}: headers:${it.headersAsString()}")
                             val nySoknad = fromConsumerRecord(it, NySoknad::class.java)
                             gsakConsumer.hentGsak(nySoknad.sakId, nySoknad.aktoerId).also { gsakId ->
                                 kafkaProducer.send(toProducerRecord(SOKNAD_TOPIC, NySoknadHentGsak(
@@ -70,7 +71,7 @@ internal fun Application.sugsak(
                                         nySoknad.soknadId,
                                         nySoknad.soknad,
                                         gsakId
-                                )))
+                                ), it.headersAsString()))
                             }
                         }
             }

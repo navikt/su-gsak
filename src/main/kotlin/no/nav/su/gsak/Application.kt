@@ -22,8 +22,10 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.slf4j.LoggerFactory
 import java.time.Duration.of
 import java.time.temporal.ChronoUnit.MILLIS
+import java.util.*
 
 val LOG = LoggerFactory.getLogger(Application::class.java)
+const val xCorrelationId = "X-Correlation-ID"
 
 @KtorExperimentalAPI
 internal fun Application.sugsak(
@@ -64,7 +66,10 @@ internal fun Application.sugsak(
                         .map {
                             LOG.info("Polled event: topic:${it.topic()}, key:${it.key()}, value:${it.value()}: headers:${it.headersAsString()}")
                             val nySoknad = fromConsumerRecord(it, NySoknad::class.java)
-                            gsakConsumer.hentGsak(nySoknad.sakId, nySoknad.aktoerId).also { gsakId ->
+                            gsakConsumer.hentGsak(
+                                    nySoknad.sakId,
+                                    nySoknad.aktoerId,
+                                    it.headersAsString().getOrDefault(xCorrelationId, UUID.randomUUID().toString())).also { gsakId ->
                                 kafkaProducer.send(toProducerRecord(SOKNAD_TOPIC, NySoknadHentGsak(
                                         nySoknad.sakId,
                                         nySoknad.aktoerId,

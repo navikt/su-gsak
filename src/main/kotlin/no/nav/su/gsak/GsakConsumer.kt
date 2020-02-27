@@ -9,13 +9,12 @@ import io.ktor.http.HttpHeaders.Accept
 import no.nav.su.person.sts.StsConsumer
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.*
 
 internal class GsakConsumer(
         private val baseUrl: String,
         private val stsConsumer: StsConsumer
 ) {
-    fun hentGsak(sakId: String, aktoerId: String): String {
+    fun hentGsak(sakId: String, aktoerId: String, correlationId: String): String {
         val (_, _, result) = "$baseUrl/saker".httpGet(listOf(
                 "aktoerId" to aktoerId,
                 "applikasjon" to "SU-GSAK",
@@ -24,23 +23,23 @@ internal class GsakConsumer(
         ))
                 .authentication().bearer(stsConsumer.token())
                 .header(Accept, Json)
-                .header("X-Correlation-ID", UUID.randomUUID())
+                .header(xCorrelationId, correlationId)
                 .responseString()
 
         return result.fold(
                 { json ->
                     JSONArray(json).let {
                         when (it.isEmpty) {
-                            true -> opprettGsak(sakId, aktoerId)
+                            true -> opprettGsak(sakId, aktoerId, correlationId)
                             else -> JSONObject(it.first()).getString("id")
                         }
                     }
                 },
-                { opprettGsak(sakId, aktoerId) }
+                { opprettGsak(sakId, aktoerId, correlationId) }
         )
     }
 
-    private fun opprettGsak(sakId: String, aktoerId: String): String {
+    private fun opprettGsak(sakId: String, aktoerId: String, correlationId: String): String {
         val (_, _, result) = "$baseUrl/saker".httpPost()
                 .jsonBody("""
                     {
@@ -52,7 +51,7 @@ internal class GsakConsumer(
                 """.trimIndent())
                 .authentication().bearer(stsConsumer.token())
                 .header(Accept, Json)
-                .header("X-Correlation-ID", UUID.randomUUID())
+                .header(xCorrelationId, correlationId)
                 .responseString()
 
         return result.fold(

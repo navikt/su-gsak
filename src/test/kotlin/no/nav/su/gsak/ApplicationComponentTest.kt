@@ -33,6 +33,7 @@ class ApplicationComponentTest {
     private val sakId = "sakId"
     private val soknadId = "soknadId"
     private val aktoerId = "aktoerId"
+    private val correlationId = "abcdef"
 
     @Test
     fun `gitt at vi ikke har en skyggesak fra før av skal vi lage en ny skyggesak når vi får melding om ny sak`() {
@@ -48,7 +49,7 @@ class ApplicationComponentTest {
                     .withQueryParam("applikasjon", equalTo("SU-GSAK"))
                     .withQueryParam("tema", equalTo("SU"))
                     .withQueryParam("fagsakNr", equalTo(sakId))
-                    .withHeader("X-Correlation-ID", AnythingPattern())
+                    .withHeader(xCorrelationId, equalTo(correlationId))
                     .withHeader(Authorization, equalTo("Bearer $STS_TOKEN"))
                     .willReturn(okJson("[]"))
             )
@@ -62,7 +63,7 @@ class ApplicationComponentTest {
                             "fagsakNr":"$sakId"
                         }
                     """.trimIndent()))
-                    .withHeader("X-Correlation-ID", AnythingPattern())
+                    .withHeader(xCorrelationId, AnythingPattern())
                     .withHeader(Authorization, equalTo("Bearer $STS_TOKEN"))
                     .willReturn(aResponse()
                             .withStatus(Created.value)
@@ -82,7 +83,7 @@ class ApplicationComponentTest {
                     aktoerId = aktoerId,
                     soknadId = soknadId,
                     soknad = """{}"""
-            ), mapOf("X-Correlation-ID" to "abcdef")))
+            ), mapOf(xCorrelationId to correlationId)))
 
             Thread.sleep(2000)
 
@@ -93,9 +94,9 @@ class ApplicationComponentTest {
             val records = kafkaConsumer.poll(of(100, MILLIS)).records(SOKNAD_TOPIC)
             assertEquals(2, records.count())
             assertTrue(compatible(records.first(), NySoknad::class.java))
-            assertEquals("abcdef", records.first().headersAsString()["X-Correlation-ID"])
+            assertEquals("abcdef", records.first().headersAsString()[xCorrelationId])
             assertTrue(compatible(records.last(), NySoknadHentGsak::class.java))
-            assertEquals("abcdef", records.last().headersAsString()["X-Correlation-ID"])
+            assertEquals("abcdef", records.last().headersAsString()[xCorrelationId])
         }
     }
 

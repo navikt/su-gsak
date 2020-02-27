@@ -32,7 +32,7 @@ internal class GsakConsumer(
                     JSONArray(json).let {
                         when (it.isEmpty) {
                             true -> opprettGsak(sakId, aktoerId)
-                            else -> GsakResponse(JSONObject(it.first())).toJson()
+                            else -> JSONObject(it.first()).getString("id")
                         }
                     }
                 },
@@ -56,30 +56,8 @@ internal class GsakConsumer(
                 .responseString()
 
         return result.fold(
-                { GsakResponse(JSONObject(it)).toJson() },
+                { JSONObject(it).getString("id") },
                 { throw RuntimeException("Could not create resource in GSAK sak for fagsak: $sakId, aktoer: $aktoerId, message: ${it.errorData}") }
         )
-    }
-}
-
-private class GsakResponse(
-        private val sakId: String,
-        private val aktoerId: String,
-        private val gsakId: String
-) {
-    constructor(json: JSONObject) : this(
-            json.getString("fagsakNr"),
-            json.getString("aktoerId"),
-            json.getString("id")
-    )
-
-    fun toJson(): String {
-        return """
-            {
-                "sakId":"$sakId",
-                "aktoerId":"$aktoerId",
-                "gsakId":"$gsakId"
-            }
-        """.trimIndent()
     }
 }

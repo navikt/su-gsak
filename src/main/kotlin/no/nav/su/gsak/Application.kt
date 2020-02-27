@@ -7,14 +7,17 @@ import io.prometheus.client.CollectorRegistry
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
+import no.nav.su.meldinger.kafka.MessageBuilder.Companion.compatible
+import no.nav.su.meldinger.kafka.MessageBuilder.Companion.fromConsumerRecord
+import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
+import no.nav.su.meldinger.kafka.soknad.NySoknad
+import no.nav.su.meldinger.kafka.soknad.NySoknadHentGsak
 import no.nav.su.person.sts.StsConsumer
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.kafka.common.serialization.StringSerializer
-import org.json.JSONObject
 import org.slf4j.LoggerFactory
 import java.time.Duration.of
 import java.time.temporal.ChronoUnit.MILLIS
@@ -56,15 +59,18 @@ internal fun Application.sugsak(
         GlobalScope.launch {
             while (true) {
                 val records: ConsumerRecords<String, String> = kafkaConsumer.poll(of(100, MILLIS))
-                records.filter { !JSONObject(it.value()).has("gsakId") }
+                records.filter { compatible(it, NySoknad::class.java) }
                         .map {
                             LOG.info("Polled event: topic:${it.topic()}, key:${it.key()}, value:${it.value()}")
-                            val hendelse = JSONObject(it.value())
-                            gsakConsumer.hentGsak(
-                                    hendelse.getString("sakId"),
-                                    hendelse.getString("aktoerId")
-                            ).also {
-                                kafkaProducer.send(ProducerRecord(SOKNAD_TOPIC, it))
+                            val nySoknad = fromConsumerRecord(it, NySoknad::class.java)
+                            gsakConsumer.hentGsak(nySoknad.sakId, nySoknad.aktoerId).also { gsakId ->
+                                kafkaProducer.send(toProducerRecord(SOKNAD_TOPIC, NySoknadHentGsak(
+                                        nySoknad.sakId,
+                                        nySoknad.aktoerId,
+                                        nySoknad.soknadId,
+                                        nySoknad.soknad,
+                                        gsakId
+                                )))
                             }
                         }
             }

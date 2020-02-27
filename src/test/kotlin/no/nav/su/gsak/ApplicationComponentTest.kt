@@ -43,7 +43,7 @@ class ApplicationComponentTest {
         }) {
             val kafkaConfig = KafkaConfigBuilder(environment.config)
             val producer = KafkaProducer(kafkaConfig.producerConfig(), StringSerializer(), StringSerializer())
-
+            val adminClient = EmbeddedKafka.kafkaInstance.adminClient!!
             stubFor(get(urlPathEqualTo("/saker"))
                     .withQueryParam("aktoerId", equalTo(aktoerId))
                     .withQueryParam("applikasjon", equalTo("SU-GSAK"))
@@ -97,6 +97,9 @@ class ApplicationComponentTest {
             assertEquals("abcdef", records.first().headersAsString()[xCorrelationId])
             assertTrue(compatible(records.last(), NySoknadHentGsak::class.java))
             assertEquals("abcdef", records.last().headersAsString()[xCorrelationId])
+
+            val offsetMetadata = adminClient.listConsumerGroupOffsets("su-gsak").partitionsToOffsetAndMetadata().get()
+            assertEquals(2, offsetMetadata[offsetMetadata.keys.first()]?.offset())
         }
     }
 
@@ -121,5 +124,4 @@ class ApplicationComponentTest {
         configureFor(wireMockServer.port())
         stubSts()
     }
-
 }

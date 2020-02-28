@@ -9,8 +9,8 @@ java {
     targetCompatibility = JavaVersion.VERSION_12
 }
 
-val githubUser: String? = "x-access-token"
-val githubPassword: String? = "huh"
+val githubUser: String? by project
+val githubPassword: String? by project
 
 repositories {
     jcenter()

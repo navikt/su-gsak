@@ -43,6 +43,7 @@ internal fun Application.sugsak(
     installMetrics(collectorRegistry)
     naisRoutes(collectorRegistry)
 
+    /*
     val kafkaConfig = KafkaConfigBuilder(environment.config)
     val kafkaConsumer = KafkaConsumer(
             kafkaConfig.consumerConfig(),
@@ -83,6 +84,7 @@ internal fun Application.sugsak(
         }
     }
     prosesserHendelser()
+     */
 }
 
 fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)

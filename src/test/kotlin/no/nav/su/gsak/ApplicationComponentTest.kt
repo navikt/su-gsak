@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration.of
 import java.time.temporal.ChronoUnit.MILLIS
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -35,7 +36,6 @@ class ApplicationComponentTest {
     private val aktoerId = "aktoerId"
     private val correlationId = "abcdef"
 
-    @Test
     fun `gitt at vi ikke har en skyggesak fra før av skal vi lage en ny skyggesak når vi får melding om ny sak`() {
         withTestApplication({
             testEnv(wireMockServer.baseUrl())

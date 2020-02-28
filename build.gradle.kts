@@ -20,8 +20,8 @@ repositories {
     maven {
         url = uri("https://maven.pkg.github.com/navikt/su-meldinger")
         credentials {
-            username = githubUser ?: System.getenv("GITHUB_USERNAME")
-            password = githubPassword ?: System.getenv("GITHUB_PASSWORD")
+            username = "x-access-token"
+            password = githubPassword ?: System.getenv("GITHUB_TOKEN")
         }
     }
 }

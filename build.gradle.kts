@@ -10,7 +10,7 @@ java {
 }
 
 val githubUser: String? = "x-access-token"
-val githubPassword: String? = System.getenv("GITHUB_TOKEN")
+val githubPassword: String? = "huh"
 
 repositories {
     jcenter()

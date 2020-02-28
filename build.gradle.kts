@@ -9,8 +9,8 @@ java {
     targetCompatibility = JavaVersion.VERSION_12
 }
 
-val githubUser: String? by project
-val githubPassword: String? by project
+val githubUser: String? = "x-access-token"
+val githubPassword: String? = System.getenv("GITHUB_TOKEN")
 
 repositories {
     jcenter()
@@ -20,8 +20,8 @@ repositories {
     maven {
         url = uri("https://maven.pkg.github.com/navikt/su-meldinger")
         credentials {
-            username = "x-access-token"
-            password = System.getenv("GITHUB_TOKEN")
+            username = githubUser
+            password = githubPassword
         }
     }
 }

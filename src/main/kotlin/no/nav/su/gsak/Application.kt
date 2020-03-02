@@ -5,6 +5,7 @@ import io.ktor.config.ApplicationConfig
 import io.ktor.util.KtorExperimentalAPI
 import io.prometheus.client.CollectorRegistry
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.compatible
@@ -65,7 +66,7 @@ internal fun Application.sugsak(
 
     fun prosesserHendelser() {
         GlobalScope.launch {
-            while (true) {
+            while (this.isActive) {
                 val records: ConsumerRecords<String, String> = kafkaConsumer.poll(of(100, MILLIS))
                 records.filter { compatible(it, NySoknad::class.java) }
                         .map {

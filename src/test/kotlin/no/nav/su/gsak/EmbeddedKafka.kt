@@ -13,8 +13,8 @@ import java.util.*
 @KtorExperimentalAPI
 class EmbeddedKafka {
     companion object {
-        val kafkaInstance = KafkaEnvironment(
-                autoStart = false,
+        fun kafkaInstance() = KafkaEnvironment(
+                autoStart = true,
                 noOfBrokers = 1,
                 topicInfos = listOf(KafkaEnvironment.TopicInfo(name = SOKNAD_TOPIC, partitions = 1)),
                 withSchemaRegistry = false,
@@ -23,20 +23,18 @@ class EmbeddedKafka {
                     this["auto.leader.rebalance.enable"] = "false"
                     this["group.initial.rebalance.delay.ms"] = "1" //Avoid waiting for new consumers to join group before first rebalancing (default 3000ms)
                 }
-        ).also {
-            it.start()
-        }
+        )
 
-        val kafkaConsumer = KafkaConsumer(
-                consumerProperties(),
+        fun kafkaConsumer(brokersURL: String) = KafkaConsumer(
+                consumerProperties(brokersURL),
                 StringDeserializer(),
                 StringDeserializer()).also {
             it.subscribe(listOf(SOKNAD_TOPIC))
         }
 
-        private fun consumerProperties(): MutableMap<String, Any>? {
+        private fun consumerProperties(brokersURL: String): MutableMap<String, Any>? {
             return HashMap<String, Any>().apply {
-                put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, kafkaInstance.brokersURL)
+                put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, brokersURL)
                 put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "PLAINTEXT")
                 put(SaslConfigs.SASL_MECHANISM, "PLAIN")
                 put(ConsumerConfig.GROUP_ID_CONFIG, "test")

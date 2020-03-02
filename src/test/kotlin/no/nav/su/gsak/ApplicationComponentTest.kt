@@ -8,7 +8,9 @@ import io.ktor.http.HttpHeaders.Authorization
 import io.ktor.http.HttpStatusCode.Companion.Created
 import io.ktor.server.testing.withTestApplication
 import io.ktor.util.KtorExperimentalAPI
+import no.nav.common.KafkaEnvironment
 import no.nav.su.gsak.EmbeddedKafka.Companion.kafkaConsumer
+import no.nav.su.gsak.EmbeddedKafka.Companion.kafkaInstance
 import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.compatible
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
@@ -17,13 +19,9 @@ import no.nav.su.meldinger.kafka.soknad.NySoknad
 import no.nav.su.meldinger.kafka.soknad.NySoknadHentGsak
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.common.serialization.StringSerializer
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.*
 import java.time.Duration.of
 import java.time.temporal.ChronoUnit.MILLIS
-import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -35,15 +33,16 @@ class ApplicationComponentTest {
     private val soknadId = "soknadId"
     private val aktoerId = "aktoerId"
     private val correlationId = "abcdef"
+    private lateinit var kafkaInstance: KafkaEnvironment
 
+    @Test
     fun `gitt at vi ikke har en skyggesak fra før av skal vi lage en ny skyggesak når vi får melding om ny sak`() {
         withTestApplication({
-            testEnv(wireMockServer.baseUrl())
+            testEnv(wireMockServer.baseUrl(), kafkaInstance.brokersURL)
             sugsak()
         }) {
             val kafkaConfig = KafkaConfigBuilder(environment.config)
             val producer = KafkaProducer(kafkaConfig.producerConfig(), StringSerializer(), StringSerializer())
-            val adminClient = EmbeddedKafka.kafkaInstance.adminClient!!
             stubFor(get(urlPathEqualTo("/saker"))
                     .withQueryParam("aktoerId", equalTo(aktoerId))
                     .withQueryParam("applikasjon", equalTo("SU-GSAK"))
@@ -91,7 +90,7 @@ class ApplicationComponentTest {
             verify(exactly(1), getRequestedFor(urlPathEqualTo("/saker")))
             verify(exactly(1), postRequestedFor(urlPathEqualTo("/saker")))
 
-            val records = kafkaConsumer.poll(of(100, MILLIS)).records(SOKNAD_TOPIC)
+            val records = kafkaConsumer(kafkaInstance.brokersURL).poll(of(100, MILLIS)).records(SOKNAD_TOPIC)
             assertEquals(2, records.count())
             assertTrue(compatible(records.first(), NySoknad::class.java))
             assertEquals("abcdef", records.first().headersAsString()[xCorrelationId])
@@ -122,7 +121,14 @@ class ApplicationComponentTest {
 
     @BeforeEach
     fun configure() {
+        kafkaInstance = kafkaInstance()
         configureFor(wireMockServer.port())
+        wireMockServer.resetAll()
         stubSts()
+    }
+
+    @AfterEach
+    fun afterEach() {
+        kafkaInstance.tearDown()
     }
 }

@@ -5,12 +5,24 @@ import io.ktor.config.ApplicationConfig
 import io.ktor.util.KtorExperimentalAPI
 import io.prometheus.client.CollectorRegistry
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
+import no.nav.su.meldinger.kafka.MessageBuilder.Companion.compatible
+import no.nav.su.meldinger.kafka.MessageBuilder.Companion.fromConsumerRecord
+import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
+import no.nav.su.meldinger.kafka.headersAsString
+import no.nav.su.meldinger.kafka.soknad.NySoknad
+import no.nav.su.meldinger.kafka.soknad.NySoknadHentGsak
 import no.nav.su.person.sts.StsConsumer
+import org.apache.kafka.clients.consumer.ConsumerRecords
+import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.clients.producer.KafkaProducer
+import org.apache.kafka.common.serialization.StringDeserializer
+import org.apache.kafka.common.serialization.StringSerializer
 import org.slf4j.LoggerFactory
-import java.lang.RuntimeException
-import kotlin.system.exitProcess
+import java.time.Duration.of
+import java.time.temporal.ChronoUnit.MILLIS
+import java.util.*
 
 val LOG = LoggerFactory.getLogger(Application::class.java)
 const val xCorrelationId = "X-Correlation-ID"
@@ -31,21 +43,11 @@ internal fun Application.sugsak(
         LOG.error("Shutdown hook initiated - exiting application")
     }))
 
-    GlobalScope.launch {
-        try {
-            throw RuntimeException("some crazy error")
-        } catch (e: Exception) {
-            LOG.error("Exception caught while processing - initiating shutdown hook. Exception: $e")
-            cancel("Exception caught while processing - canceling coroutine", e)
-            exitProcess(1)
-        }
-    }
-
     val collectorRegistry = CollectorRegistry.defaultRegistry
     installMetrics(collectorRegistry)
     naisRoutes(collectorRegistry)
 
-    /*
+
     val kafkaConfig = KafkaConfigBuilder(environment.config)
     val kafkaConsumer = KafkaConsumer(
             kafkaConfig.consumerConfig(),
@@ -86,7 +88,6 @@ internal fun Application.sugsak(
         }
     }
     prosesserHendelser()
-     */
 }
 
 fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)

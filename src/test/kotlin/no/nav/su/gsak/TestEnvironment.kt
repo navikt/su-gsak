@@ -10,14 +10,14 @@ const val PASSWORD = "srvPassword"
 const val STS_TOKEN = "stsToken"
 
 @KtorExperimentalAPI
-fun Application.testEnv(wireMockUrl: String = "") {
+fun Application.testEnv(wireMockUrl: String = "", brokersURL: String) {
     (environment.config as MapApplicationConfig).apply {
         put("sts.url", wireMockUrl)
         put("serviceuser.username", USERNAME)
         put("serviceuser.password", PASSWORD)
         put("kafka.username", USERNAME)
         put("kafka.password", PASSWORD)
-        put("kafka.bootstrap", EmbeddedKafka.kafkaInstance.brokersURL)
+        put("kafka.bootstrap", brokersURL)
         put("kafka.trustStorePath", "")
         put("kafka.trustStorePassword", "")
         put("gsak.url", wireMockUrl)

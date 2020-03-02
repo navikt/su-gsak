@@ -24,7 +24,9 @@ internal class KafkaConfigBuilder(
     }
 
     fun consumerConfig() = kafkaBaseConfig().apply {
-        put(ConsumerConfig.GROUP_ID_CONFIG, "su-gsak")
+        put(ConsumerConfig.GROUP_ID_CONFIG, env.getProperty("kafka.groupId"))
+        put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true")
+        put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, env.getProperty("kafka.commitInterval"))
         put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     }
 

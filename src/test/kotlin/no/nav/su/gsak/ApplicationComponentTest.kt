@@ -17,6 +17,7 @@ import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
 import no.nav.su.meldinger.kafka.headersAsString
 import no.nav.su.meldinger.kafka.soknad.NySoknad
 import no.nav.su.meldinger.kafka.soknad.NySoknadHentGsak
+import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.junit.jupiter.api.*
@@ -34,6 +35,8 @@ class ApplicationComponentTest {
     private val aktoerId = "aktoerId"
     private val correlationId = "abcdef"
     private lateinit var kafkaInstance: KafkaEnvironment
+    private lateinit var adminClient: AdminClient
+
 
     @Test
     fun `gitt at vi ikke har en skyggesak fra før av skal vi lage en ny skyggesak når vi får melding om ny sak`() {
@@ -43,39 +46,9 @@ class ApplicationComponentTest {
         }) {
             val kafkaConfig = KafkaConfigBuilder(environment.config)
             val producer = KafkaProducer(kafkaConfig.producerConfig(), StringSerializer(), StringSerializer())
-            stubFor(get(urlPathEqualTo("/saker"))
-                    .withQueryParam("aktoerId", equalTo(aktoerId))
-                    .withQueryParam("applikasjon", equalTo("SU-GSAK"))
-                    .withQueryParam("tema", equalTo("SU"))
-                    .withQueryParam("fagsakNr", equalTo(sakId))
-                    .withHeader(xCorrelationId, equalTo(correlationId))
-                    .withHeader(Authorization, equalTo("Bearer $STS_TOKEN"))
-                    .willReturn(okJson("[]"))
-            )
 
-            stubFor(post(urlPathEqualTo("/saker"))
-                    .withRequestBody(equalToJson("""
-                        {
-                            "tema":"SU",
-                            "applikasjon":"SU-GSAK",
-                            "aktoerId":"$aktoerId",
-                            "fagsakNr":"$sakId"
-                        }
-                    """.trimIndent()))
-                    .withHeader(xCorrelationId, AnythingPattern())
-                    .withHeader(Authorization, equalTo("Bearer $STS_TOKEN"))
-                    .willReturn(aResponse()
-                            .withStatus(Created.value)
-                            .withBody("""
-                        {
-                            "id":"1",
-                            "tema":"SU",
-                            "applikasjon":"SU-GSAK",
-                            "aktoerId":"$aktoerId",
-                            "fagsakNr":"$sakId"
-                        }
-                    """.trimIndent()))
-            )
+            stubFor(noExistingGsak)
+            stubFor(gsakCreated)
 
             producer.send(toProducerRecord(SOKNAD_TOPIC, NySoknad(
                     sakId = sakId,
@@ -84,24 +57,62 @@ class ApplicationComponentTest {
                     soknad = """{}"""
             ), mapOf(xCorrelationId to correlationId)))
 
-            Thread.sleep(2000)
+            Thread.sleep(500)
+
+            val records = kafkaConsumer(kafkaInstance.brokersURL)
+                    .poll(of(100, MILLIS))
+                    .records(SOKNAD_TOPIC)
 
             verify(exactly(1), getRequestedFor(urlPathEqualTo("/rest/v1/sts/token")))
             verify(exactly(1), getRequestedFor(urlPathEqualTo("/saker")))
             verify(exactly(1), postRequestedFor(urlPathEqualTo("/saker")))
 
-            val records = kafkaConsumer(kafkaInstance.brokersURL).poll(of(100, MILLIS)).records(SOKNAD_TOPIC)
             assertEquals(2, records.count())
             assertTrue(compatible(records.first(), NySoknad::class.java))
-            assertEquals("abcdef", records.first().headersAsString()[xCorrelationId])
+            assertEquals(correlationId, records.first().headersAsString()[xCorrelationId])
             assertTrue(compatible(records.last(), NySoknadHentGsak::class.java))
-            assertEquals("abcdef", records.last().headersAsString()[xCorrelationId])
+            assertEquals(correlationId, records.last().headersAsString()[xCorrelationId])
 
-//            Depends on commit interval
-//            val offsetMetadata = adminClient.listConsumerGroupOffsets("su-gsak").partitionsToOffsetAndMetadata().get()
-//            assertEquals(2, offsetMetadata[offsetMetadata.keys.first()]?.offset())
+            val offsetMetadata = adminClient.listConsumerGroupOffsets(CONSUMER_GROUP_ID)
+                    .partitionsToOffsetAndMetadata().get()
+
+            assertEquals(2, offsetMetadata[offsetMetadata.keys.first()]?.offset())
         }
     }
+
+    private val noExistingGsak = get(urlPathEqualTo("/saker"))
+            .withQueryParam("aktoerId", equalTo(aktoerId))
+            .withQueryParam("applikasjon", equalTo("SU-GSAK"))
+            .withQueryParam("tema", equalTo("SU"))
+            .withQueryParam("fagsakNr", equalTo(sakId))
+            .withHeader(xCorrelationId, equalTo(correlationId))
+            .withHeader(Authorization, equalTo("Bearer $STS_TOKEN"))
+            .willReturn(okJson("[]"))
+
+
+    private val gsakCreated = post(urlPathEqualTo("/saker"))
+            .withRequestBody(equalToJson("""
+                        {
+                            "tema":"SU",
+                            "applikasjon":"SU-GSAK",
+                            "aktoerId":"$aktoerId",
+                            "fagsakNr":"$sakId"
+                        }
+                    """.trimIndent()))
+            .withHeader(xCorrelationId, AnythingPattern())
+            .withHeader(Authorization, equalTo("Bearer $STS_TOKEN"))
+            .willReturn(aResponse()
+                    .withStatus(Created.value)
+                    .withBody("""
+                        {
+                            "id":"1",
+                            "tema":"SU",
+                            "applikasjon":"SU-GSAK",
+                            "aktoerId":"$aktoerId",
+                            "fagsakNr":"$sakId"
+                        }
+                    """.trimIndent()))
+
 
     companion object {
         val wireMockServer: WireMockServer = WireMockServer(WireMockConfiguration.options().dynamicPort())
@@ -122,6 +133,7 @@ class ApplicationComponentTest {
     @BeforeEach
     fun configure() {
         kafkaInstance = kafkaInstance()
+        adminClient = kafkaInstance.adminClient!!
         configureFor(wireMockServer.port())
         wireMockServer.resetAll()
         stubSts()

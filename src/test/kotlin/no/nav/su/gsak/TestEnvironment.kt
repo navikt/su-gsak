@@ -8,6 +8,7 @@ import io.ktor.util.KtorExperimentalAPI
 const val USERNAME = "srvUser"
 const val PASSWORD = "srvPassword"
 const val STS_TOKEN = "stsToken"
+const val CONSUMER_GROUP_ID = "su-gsak"
 
 @KtorExperimentalAPI
 fun Application.testEnv(wireMockUrl: String = "", brokersURL: String) {
@@ -20,6 +21,8 @@ fun Application.testEnv(wireMockUrl: String = "", brokersURL: String) {
         put("kafka.bootstrap", brokersURL)
         put("kafka.trustStorePath", "")
         put("kafka.trustStorePassword", "")
+        put("kafka.groupId", CONSUMER_GROUP_ID)
+        put("kafka.commitInterval", "100")
         put("gsak.url", wireMockUrl)
     }
 }

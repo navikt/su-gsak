@@ -13,7 +13,7 @@ import java.util.*
 @KtorExperimentalAPI
 class EmbeddedKafka {
     companion object {
-        fun kafkaInstance() = KafkaEnvironment(
+        fun embeddedKafka() = KafkaEnvironment(
                 autoStart = true,
                 noOfBrokers = 1,
                 topicInfos = listOf(KafkaEnvironment.TopicInfo(name = SOKNAD_TOPIC, partitions = 1)),
@@ -25,23 +25,23 @@ class EmbeddedKafka {
                 }
         )
 
-        fun kafkaConsumer(brokersURL: String) = KafkaConsumer(
-                consumerProperties(brokersURL),
+        fun testKafkaConsumer(brokersURL: String) = KafkaConsumer(
+                testConsumerProperties(brokersURL),
                 StringDeserializer(),
                 StringDeserializer()).also {
             it.subscribe(listOf(SOKNAD_TOPIC))
         }
 
-        private fun consumerProperties(brokersURL: String): MutableMap<String, Any>? {
+        private fun testConsumerProperties(brokersURL: String): MutableMap<String, Any>? {
             return HashMap<String, Any>().apply {
                 put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, brokersURL)
                 put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, "PLAINTEXT")
                 put(SaslConfigs.SASL_MECHANISM, "PLAIN")
                 put(ConsumerConfig.GROUP_ID_CONFIG, "test")
                 put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+                put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true")
+                put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "100")
             }
         }
     }
-
-
 }

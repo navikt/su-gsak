@@ -9,14 +9,14 @@ import io.ktor.http.HttpStatusCode.Companion.Created
 import io.ktor.server.testing.withTestApplication
 import io.ktor.util.KtorExperimentalAPI
 import no.nav.common.KafkaEnvironment
-import no.nav.su.gsak.EmbeddedKafka.Companion.kafkaConsumer
-import no.nav.su.gsak.EmbeddedKafka.Companion.kafkaInstance
+import no.nav.su.gsak.EmbeddedKafka.Companion.embeddedKafka
+import no.nav.su.gsak.EmbeddedKafka.Companion.testKafkaConsumer
 import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
-import no.nav.su.meldinger.kafka.MessageBuilder.Companion.compatible
+import no.nav.su.meldinger.kafka.MessageBuilder.Companion.fromConsumerRecord
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
 import no.nav.su.meldinger.kafka.headersAsString
 import no.nav.su.meldinger.kafka.soknad.NySoknad
-import no.nav.su.meldinger.kafka.soknad.NySoknadHentGsak
+import no.nav.su.meldinger.kafka.soknad.NySoknadMedSkyggesak
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.common.serialization.StringSerializer
@@ -33,15 +33,16 @@ class ApplicationComponentTest {
     private val sakId = "sakId"
     private val soknadId = "soknadId"
     private val aktoerId = "aktoerId"
-    private val correlationId = "abcdef"
-    private lateinit var kafkaInstance: KafkaEnvironment
+    private val correlationId = "correlationId"
+    private val soknad = """{"key":"value"}"""
+    private lateinit var embeddedKafka: KafkaEnvironment
     private lateinit var adminClient: AdminClient
 
 
     @Test
     fun `gitt at vi ikke har en skyggesak fra før av skal vi lage en ny skyggesak når vi får melding om ny sak`() {
         withTestApplication({
-            testEnv(wireMockServer.baseUrl(), kafkaInstance.brokersURL)
+            testEnv(wireMockServer.baseUrl(), embeddedKafka.brokersURL)
             sugsak()
         }) {
             val kafkaConfig = KafkaConfigBuilder(environment.config)
@@ -50,16 +51,16 @@ class ApplicationComponentTest {
             stubFor(noExistingGsak)
             stubFor(gsakCreated)
 
-            producer.send(toProducerRecord(SOKNAD_TOPIC, NySoknad(
+            producer.send(NySoknad(
                     sakId = sakId,
                     aktoerId = aktoerId,
                     soknadId = soknadId,
-                    soknad = """{}"""
-            ), mapOf(xCorrelationId to correlationId)))
+                    soknad = soknad
+            ).toProducerRecord(SOKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
 
             Thread.sleep(500)
 
-            val records = kafkaConsumer(kafkaInstance.brokersURL)
+            val records = testKafkaConsumer(embeddedKafka.brokersURL)
                     .poll(of(100, MILLIS))
                     .records(SOKNAD_TOPIC)
 
@@ -68,14 +69,13 @@ class ApplicationComponentTest {
             verify(exactly(1), postRequestedFor(urlPathEqualTo("/saker")))
 
             assertEquals(2, records.count())
-            assertTrue(compatible(records.first(), NySoknad::class.java))
+            assertTrue(fromConsumerRecord(records.first()) is NySoknad)
             assertEquals(correlationId, records.first().headersAsString()[xCorrelationId])
-            assertTrue(compatible(records.last(), NySoknadHentGsak::class.java))
+            assertTrue(fromConsumerRecord(records.last()) is NySoknadMedSkyggesak)
             assertEquals(correlationId, records.last().headersAsString()[xCorrelationId])
 
             val offsetMetadata = adminClient.listConsumerGroupOffsets(CONSUMER_GROUP_ID)
                     .partitionsToOffsetAndMetadata().get()
-
             assertEquals(2, offsetMetadata[offsetMetadata.keys.first()]?.offset())
         }
     }
@@ -131,9 +131,9 @@ class ApplicationComponentTest {
     }
 
     @BeforeEach
-    fun configure() {
-        kafkaInstance = kafkaInstance()
-        adminClient = kafkaInstance.adminClient!!
+    fun beforeEach() {
+        embeddedKafka = embeddedKafka()
+        adminClient = embeddedKafka.adminClient!!
         configureFor(wireMockServer.port())
         wireMockServer.resetAll()
         stubSts()
@@ -141,6 +141,6 @@ class ApplicationComponentTest {
 
     @AfterEach
     fun afterEach() {
-        kafkaInstance.tearDown()
+        embeddedKafka.tearDown()
     }
 }

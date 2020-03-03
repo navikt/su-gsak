@@ -4,18 +4,16 @@ import io.ktor.application.Application
 import io.ktor.config.ApplicationConfig
 import io.ktor.util.KtorExperimentalAPI
 import io.prometheus.client.CollectorRegistry
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
-import no.nav.su.meldinger.kafka.MessageBuilder.Companion.compatible
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.fromConsumerRecord
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
 import no.nav.su.meldinger.kafka.headersAsString
 import no.nav.su.meldinger.kafka.soknad.NySoknad
-import no.nav.su.meldinger.kafka.soknad.NySoknadHentGsak
+import no.nav.su.meldinger.kafka.soknad.NySoknadMedSkyggesak
+import no.nav.su.meldinger.kafka.soknad.UkjentFormat
 import no.nav.su.person.sts.StsConsumer
-import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -64,31 +62,37 @@ internal fun Application.sugsak(
             StringSerializer()
     )
 
-    fun prosesserHendelser() {
-        GlobalScope.launch {
-            while (this.isActive) {
-                val records: ConsumerRecords<String, String> = kafkaConsumer.poll(of(100, MILLIS))
-                records.filter { compatible(it, NySoknad::class.java) }
-                        .map {
-                            LOG.info("Polled event: topic:${it.topic()}, key:${it.key()}, value:${it.value()}: headers:${it.headersAsString()}")
-                            val nySoknad = fromConsumerRecord(it, NySoknad::class.java)
-                            gsakConsumer.hentGsak(
-                                    nySoknad.sakId,
-                                    nySoknad.aktoerId,
-                                    it.headersAsString().getOrDefault(xCorrelationId, UUID.randomUUID().toString())).also { gsakId ->
-                                kafkaProducer.send(toProducerRecord(SOKNAD_TOPIC, NySoknadHentGsak(
-                                        nySoknad.sakId,
-                                        nySoknad.aktoerId,
-                                        nySoknad.soknadId,
-                                        nySoknad.soknad,
-                                        gsakId
-                                ), it.headersAsString()))
+    launch {
+        while (this.isActive) {
+            kafkaConsumer.poll(of(100, MILLIS))
+                    .map {
+                        LOG.info("Polled event: topic:${it.topic()}, key:${it.key()}, value:${it.value()}: headers:${it.headersAsString()}")
+                        when (val message = fromConsumerRecord(it)) {
+                            is NySoknad -> {
+                                gsakConsumer.hentGsak(
+                                        message.sakId,
+                                        message.aktoerId,
+                                        it.headersAsString().getOrDefault(xCorrelationId, UUID.randomUUID().toString()))
+                                        .also { gsakId ->
+                                            kafkaProducer.send(NySoknadMedSkyggesak(
+                                                    message.sakId,
+                                                    message.aktoerId,
+                                                    message.soknadId,
+                                                    message.soknad,
+                                                    gsakId
+                                            ).toProducerRecord(SOKNAD_TOPIC, it.headersAsString()))
+                                        }
+                            }
+                            is UkjentFormat -> {
+                                LOG.warn("Unknown message format of type:${message::class}, message:$message")
+                            }
+                            else -> {
+                                LOG.info("Skipping message of type:${message::class}")
                             }
                         }
-            }
+                    }
         }
     }
-    prosesserHendelser()
 }
 
 fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)

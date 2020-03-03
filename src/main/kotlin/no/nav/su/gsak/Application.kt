@@ -7,6 +7,10 @@ import io.prometheus.client.CollectorRegistry
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
+import no.nav.su.gsak.Metrics.messageProcessed
+import no.nav.su.gsak.Metrics.messageRead
+import no.nav.su.gsak.Metrics.messageSkipped
+import no.nav.su.gsak.Metrics.messageUnknownFormat
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.fromConsumerRecord
 import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
 import no.nav.su.meldinger.kafka.headersAsString
@@ -67,6 +71,7 @@ internal fun Application.sugsak(
             kafkaConsumer.poll(of(100, MILLIS))
                     .map {
                         LOG.info("Polled event: topic:${it.topic()}, key:${it.key()}, value:${it.value()}: headers:${it.headersAsString()}")
+                        messageRead()
                         when (val message = fromConsumerRecord(it)) {
                             is NySoknad -> {
                                 gsakConsumer.hentGsak(
@@ -81,13 +86,18 @@ internal fun Application.sugsak(
                                                     message.soknad,
                                                     gsakId
                                             ).toProducerRecord(SOKNAD_TOPIC, it.headersAsString()))
+                                        }.also {
+                                            messageProcessed()
                                         }
                             }
                             is UkjentFormat -> {
                                 LOG.warn("Unknown message format of type:${message::class}, message:$message")
+                                messageUnknownFormat()
+                                messageSkipped()
                             }
                             else -> {
                                 LOG.info("Skipping message of type:${message::class}")
+                                messageSkipped()
                             }
                         }
                     }

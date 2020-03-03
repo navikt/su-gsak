@@ -24,6 +24,7 @@ fun Application.testEnv(wireMockUrl: String = "", brokersURL: String) {
         put("kafka.groupId", CONSUMER_GROUP_ID)
         put("kafka.commitInterval", "100")
         put("gsak.url", wireMockUrl)
+        put("gsak.enabled", "true")
     }
 }
 

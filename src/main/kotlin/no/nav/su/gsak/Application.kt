@@ -77,21 +77,26 @@ internal fun Application.sugsak(
                             messageRead()
                             when (val message = fromConsumerRecord(it)) {
                                 is NySoknad -> {
-                                    gsakConsumer.hentGsak(
-                                            message.sakId,
-                                            message.aktoerId,
-                                            it.headersAsString().getOrDefault(xCorrelationId, UUID.randomUUID().toString()))
-                                            .also { gsakId ->
-                                                kafkaProducer.send(NySoknadMedSkyggesak(
-                                                        message.sakId,
-                                                        message.aktoerId,
-                                                        message.soknadId,
-                                                        message.soknad,
-                                                        gsakId
-                                                ).toProducerRecord(SOKNAD_TOPIC, it.headersAsString()))
-                                            }.also {
-                                                messageProcessed()
-                                            }
+                                    if (environment.config.getProperty("gsak.enabled").toBoolean()) {
+                                        gsakConsumer.hentGsak(
+                                                message.sakId,
+                                                message.aktoerId,
+                                                it.headersAsString().getOrDefault(xCorrelationId, UUID.randomUUID().toString()))
+                                                .also { gsakId ->
+                                                    kafkaProducer.send(NySoknadMedSkyggesak(
+                                                            message.sakId,
+                                                            message.aktoerId,
+                                                            message.soknadId,
+                                                            message.soknad,
+                                                            gsakId
+                                                    ).toProducerRecord(SOKNAD_TOPIC, it.headersAsString()))
+                                                }.also {
+                                                    messageProcessed()
+                                                }
+                                    } else {
+                                        LOG.info("Processed message of type:${message::class}, message:$message")
+                                        messageProcessed()
+                                    }
                                 }
                                 is UkjentFormat -> {
                                     LOG.warn("Unknown message format of type:${message::class}, message:$message")

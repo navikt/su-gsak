@@ -18,8 +18,8 @@ spec:
     paths:
       - mountPath: /var/run/secrets/nais.io/vault
         kvPath: /secret/supstonad/{{ secret_env }}
-      - mountPath: /var/run/secrets/nais.io/srvuser
-        kvPath: /serviceuser/data/{{ secret_env }}/srvsupstonad
+#      - mountPath: /var/run/secrets/nais.io/srvuser
+#        kvPath: /serviceuser/data/{{ secret_env }}/srvsupstonad
   env:
      {{#each env}}
       - name: {{@key}}

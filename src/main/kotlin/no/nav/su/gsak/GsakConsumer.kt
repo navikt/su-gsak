@@ -35,7 +35,7 @@ internal class GsakConsumer(
                         }
                     }
                 },
-                { opprettGsak(sakId, aktoerId, correlationId) }
+                { throw GsakConsumerException("Could not get resource in GSAK for fagsak: $sakId, aktoer: $aktoerId, $xCorrelationId:$correlationId, error: $it") }
         )
     }
 
@@ -56,7 +56,9 @@ internal class GsakConsumer(
 
         return result.fold(
                 { JSONObject(it).getString("id") },
-                { throw RuntimeException("Could not create resource in GSAK sak for fagsak: $sakId, aktoer: $aktoerId, message: ${it.errorData}") }
+                { throw GsakConsumerException("Could not create resource in GSAK for fagsak: $sakId, aktoer: $aktoerId, $xCorrelationId:$correlationId, error: $it") }
         )
     }
 }
+
+internal class GsakConsumerException(message: String) : java.lang.RuntimeException(message)

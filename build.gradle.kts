@@ -59,6 +59,7 @@ dependencies {
     }
     testImplementation("com.opentable.components:otj-pg-embedded:0.13.3")
     testImplementation("no.nav:kafka-embedded-env:2.2.3")
+    testImplementation("com.ginsberg:junit5-system-exit:1.0.0")
 }
 
 tasks.named<Jar>("jar") {

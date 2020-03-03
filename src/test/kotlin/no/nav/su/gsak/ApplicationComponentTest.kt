@@ -1,11 +1,13 @@
 package no.nav.su.gsak
 
+import com.ginsberg.junit.exit.ExpectSystemExit
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.*
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration
 import com.github.tomakehurst.wiremock.matching.AnythingPattern
 import io.ktor.http.HttpHeaders.Authorization
 import io.ktor.http.HttpStatusCode.Companion.Created
+import io.ktor.http.HttpStatusCode.Companion.ServiceUnavailable
 import io.ktor.server.testing.withTestApplication
 import io.ktor.util.KtorExperimentalAPI
 import no.nav.common.KafkaEnvironment
@@ -80,6 +82,39 @@ class ApplicationComponentTest {
         }
     }
 
+    @Test
+    @ExpectSystemExit
+    fun `application should fail fast if exceptions are thrown`() {
+        withTestApplication({
+            testEnv(wireMockServer.baseUrl(), embeddedKafka.brokersURL)
+            sugsak()
+        }) {
+            val kafkaConfig = KafkaConfigBuilder(environment.config)
+            val producer = KafkaProducer(kafkaConfig.producerConfig(), StringSerializer(), StringSerializer())
+
+            stubFor(gsakError)
+
+            producer.send(NySoknad(
+                    sakId = sakId,
+                    aktoerId = aktoerId,
+                    soknadId = soknadId,
+                    soknad = soknad
+            ).toProducerRecord(SOKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
+
+            Thread.sleep(500)
+
+            verify(exactly(1), getRequestedFor(urlPathEqualTo("/rest/v1/sts/token")))
+            verify(exactly(1), getRequestedFor(urlPathEqualTo("/saker")))
+
+            val offsetMetadata = adminClient.listConsumerGroupOffsets(CONSUMER_GROUP_ID)
+                    .partitionsToOffsetAndMetadata().get()
+            assertEquals(0, offsetMetadata.keys.size) //Expect no offset committed
+        }
+    }
+
+    private val gsakError = get(urlPathEqualTo("/saker"))
+            .willReturn(aResponse().withStatus(ServiceUnavailable.value))
+
     private val noExistingGsak = get(urlPathEqualTo("/saker"))
             .withQueryParam("aktoerId", equalTo(aktoerId))
             .withQueryParam("applikasjon", equalTo("SU-GSAK"))
@@ -141,6 +176,7 @@ class ApplicationComponentTest {
 
     @AfterEach
     fun afterEach() {
+        adminClient.close()
         embeddedKafka.tearDown()
     }
 }

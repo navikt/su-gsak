@@ -8,7 +8,6 @@ object Metrics {
     private val messagesProcessed = Counter.build("${prefix}messages_processed_total", "Antall meldinger prosessert").register()
     private val messagesUnknownFormat = Counter.build("${prefix}messages_skipped_unknown_format_total", "Antall meldinger med ukjent format").register()
     private val messagesSkipped = Counter.build("${prefix}messages_skipped_total", "Antall meldinger av typer som ikke skal prosesseres").register()
-    private val metric = Counter.build("${prefix}metric", "test").register().inc()
 
     fun messageRead() {
         messagesRead.inc()

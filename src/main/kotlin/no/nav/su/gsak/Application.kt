@@ -10,10 +10,9 @@ import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
 import no.nav.su.gsak.Metrics.messageProcessed
 import no.nav.su.gsak.Metrics.messageRead
 import no.nav.su.meldinger.kafka.headersAsString
-import no.nav.su.meldinger.kafka.soknad.KafkaMessage.Companion.toProducerRecord
-import no.nav.su.meldinger.kafka.soknad.NySoknad
-import no.nav.su.meldinger.kafka.soknad.NySoknadMedSkyggesak
-import no.nav.su.meldinger.kafka.soknad.SoknadMelding.Companion.fromConsumerRecord
+import no.nav.su.meldinger.kafka.soknad.NySøknad
+import no.nav.su.meldinger.kafka.soknad.NySøknadMedSkyggesak
+import no.nav.su.meldinger.kafka.soknad.SøknadMelding.Companion.fromConsumerRecord
 import no.nav.su.person.sts.StsConsumer
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -74,13 +73,13 @@ internal fun Application.suGsak(
                         it.logMessage()
                         messageRead()
                     }
-                    .filter { fromConsumerRecord(it) is NySoknad }
-                    .map { Pair(fromConsumerRecord(it) as NySoknad, it.headersAsString()) }
+                    .filter { fromConsumerRecord(it) is NySøknad }
+                    .map { Pair(fromConsumerRecord(it) as NySøknad, it.headersAsString()) }
                     .forEach {
                         val message = it.first
                         if (useGSak) {
                             val correlationId = it.second.getOrDefault(xCorrelationId, UUID.randomUUID().toString())
-                            val gsakId = gsakConsumer.hentGsak(message.sakId, message.aktoerId, correlationId)
+                            val gsakId = gsakConsumer.hentGsak(message.sakId, message.aktørId, correlationId)
                             kafkaProducer.send(message.asSkygge(gsakId).toProducerRecord(SOKNAD_TOPIC, it.second))
                             messageProcessed()
                         } else {
@@ -96,7 +95,7 @@ internal fun Application.suGsak(
     }
 }
 
-private fun NySoknad.asSkygge(gsakId: String) = NySoknadMedSkyggesak(sakId = sakId, aktoerId = aktoerId, soknadId = soknadId, soknad = soknad, fnr = fnr, gsakId = gsakId)
+private fun NySøknad.asSkygge(gsakId: String) = NySøknadMedSkyggesak(sakId = sakId, aktørId = aktørId, søknadId = søknadId, søknad = søknad, fnr = fnr, gsakId = gsakId)
 
 fun ConsumerRecord<String, String>.logMessage() {
     LOG.info("Polled message: topic:${this.topic()}, key:${this.key()}, value:${this.value()}: $xCorrelationId:${this.headersAsString()[xCorrelationId]}")

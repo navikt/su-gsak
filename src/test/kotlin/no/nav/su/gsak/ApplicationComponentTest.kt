@@ -15,10 +15,9 @@ import no.nav.su.gsak.EmbeddedKafka.Companion.embeddedKafka
 import no.nav.su.gsak.EmbeddedKafka.Companion.testKafkaConsumer
 import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
 import no.nav.su.meldinger.kafka.headersAsString
-import no.nav.su.meldinger.kafka.soknad.KafkaMessage.Companion.toProducerRecord
-import no.nav.su.meldinger.kafka.soknad.NySoknad
-import no.nav.su.meldinger.kafka.soknad.NySoknadMedSkyggesak
-import no.nav.su.meldinger.kafka.soknad.SoknadMelding.Companion.fromConsumerRecord
+import no.nav.su.meldinger.kafka.soknad.NySøknad
+import no.nav.su.meldinger.kafka.soknad.NySøknadMedSkyggesak
+import no.nav.su.meldinger.kafka.soknad.SøknadMelding.Companion.fromConsumerRecord
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.common.serialization.StringSerializer
@@ -53,11 +52,11 @@ class ApplicationComponentTest {
             stubFor(noExistingGsak)
             stubFor(gsakCreated)
 
-            producer.send(NySoknad(
+            producer.send(NySøknad(
                     sakId = sakId,
-                    aktoerId = aktørId,
-                    soknadId = søknadId,
-                    soknad = søknad,
+                    aktørId = aktørId,
+                    søknadId = søknadId,
+                    søknad = søknad,
                     fnr = fnr
             ).toProducerRecord(SOKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
 
@@ -72,9 +71,9 @@ class ApplicationComponentTest {
             verify(exactly(1), postRequestedFor(urlPathEqualTo("/saker")))
 
             assertEquals(2, records.count())
-            assertTrue(fromConsumerRecord(records.first()) is NySoknad)
+            assertTrue(fromConsumerRecord(records.first()) is NySøknad)
             assertEquals(correlationId, records.first().headersAsString()[xCorrelationId])
-            assertTrue(fromConsumerRecord(records.last()) is NySoknadMedSkyggesak)
+            assertTrue(fromConsumerRecord(records.last()) is NySøknadMedSkyggesak)
             assertEquals(correlationId, records.last().headersAsString()[xCorrelationId])
 
             val offsetMetadata = adminClient.listConsumerGroupOffsets(CONSUMER_GROUP_ID)
@@ -95,11 +94,11 @@ class ApplicationComponentTest {
 
             stubFor(gsakError)
 
-            producer.send(NySoknad(
+            producer.send(NySøknad(
                     sakId = sakId,
-                    aktoerId = aktørId,
-                    soknadId = søknadId,
-                    soknad = søknad,
+                    aktørId = aktørId,
+                    søknadId = søknadId,
+                    søknad = søknad,
                     fnr = fnr
             ).toProducerRecord(SOKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
 

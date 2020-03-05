@@ -30,7 +30,7 @@ val LOG = LoggerFactory.getLogger(Application::class.java)
 const val xCorrelationId = "X-Correlation-ID"
 
 @KtorExperimentalAPI
-internal fun Application.sugsak(
+internal fun Application.suGsak(
         stsConsumer: StsConsumer = StsConsumer(
                 environment.config.getProperty("sts.url"),
                 environment.config.getProperty("serviceuser.username"),
@@ -44,7 +44,6 @@ internal fun Application.sugsak(
     val collectorRegistry = CollectorRegistry.defaultRegistry
     installMetrics(collectorRegistry)
     naisRoutes(collectorRegistry)
-
 
     val kafkaConfig = KafkaConfigBuilder(environment.config)
     val kafkaConsumer = KafkaConsumer(

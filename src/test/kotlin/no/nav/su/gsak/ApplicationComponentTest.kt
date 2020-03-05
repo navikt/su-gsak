@@ -33,20 +33,19 @@ import kotlin.test.assertTrue
 class ApplicationComponentTest {
 
     private val sakId = "sakId"
-    private val soknadId = "soknadId"
-    private val aktoerId = "aktoerId"
+    private val søknadId = "soknadId"
+    private val aktørId = "aktoerId"
     private val correlationId = "correlationId"
-    private val soknad = """{"key":"value"}"""
+    private val søknad = """{"key":"value"}"""
     private val fnr = "12345678910"
     private lateinit var embeddedKafka: KafkaEnvironment
     private lateinit var adminClient: AdminClient
-
 
     @Test
     fun `gitt at vi ikke har en skyggesak fra før av skal vi lage en ny skyggesak når vi får melding om ny sak`() {
         withTestApplication({
             testEnv(wireMockServer.baseUrl(), embeddedKafka.brokersURL)
-            sugsak()
+            suGsak()
         }) {
             val kafkaConfig = KafkaConfigBuilder(environment.config)
             val producer = KafkaProducer(kafkaConfig.producerConfig(), StringSerializer(), StringSerializer())
@@ -56,9 +55,9 @@ class ApplicationComponentTest {
 
             producer.send(NySoknad(
                     sakId = sakId,
-                    aktoerId = aktoerId,
-                    soknadId = soknadId,
-                    soknad = soknad,
+                    aktoerId = aktørId,
+                    soknadId = søknadId,
+                    soknad = søknad,
                     fnr = fnr
             ).toProducerRecord(SOKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
 
@@ -89,7 +88,7 @@ class ApplicationComponentTest {
     fun `application should fail fast if exceptions are thrown`() {
         withTestApplication({
             testEnv(wireMockServer.baseUrl(), embeddedKafka.brokersURL)
-            sugsak()
+            suGsak()
         }) {
             val kafkaConfig = KafkaConfigBuilder(environment.config)
             val producer = KafkaProducer(kafkaConfig.producerConfig(), StringSerializer(), StringSerializer())
@@ -98,9 +97,9 @@ class ApplicationComponentTest {
 
             producer.send(NySoknad(
                     sakId = sakId,
-                    aktoerId = aktoerId,
-                    soknadId = soknadId,
-                    soknad = soknad,
+                    aktoerId = aktørId,
+                    soknadId = søknadId,
+                    soknad = søknad,
                     fnr = fnr
             ).toProducerRecord(SOKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
 
@@ -119,7 +118,7 @@ class ApplicationComponentTest {
             .willReturn(aResponse().withStatus(ServiceUnavailable.value))
 
     private val noExistingGsak = get(urlPathEqualTo("/saker"))
-            .withQueryParam("aktoerId", equalTo(aktoerId))
+            .withQueryParam("aktoerId", equalTo(aktørId))
             .withQueryParam("applikasjon", equalTo("SU-GSAK"))
             .withQueryParam("tema", equalTo("SU"))
             .withQueryParam("fagsakNr", equalTo(sakId))
@@ -133,7 +132,7 @@ class ApplicationComponentTest {
                         {
                             "tema":"SU",
                             "applikasjon":"SU-GSAK",
-                            "aktoerId":"$aktoerId",
+                            "aktoerId":"$aktørId",
                             "fagsakNr":"$sakId"
                         }
                     """.trimIndent()))
@@ -146,7 +145,7 @@ class ApplicationComponentTest {
                             "id":"1",
                             "tema":"SU",
                             "applikasjon":"SU-GSAK",
-                            "aktoerId":"$aktoerId",
+                            "aktoerId":"$aktørId",
                             "fagsakNr":"$sakId"
                         }
                     """.trimIndent()))

@@ -14,9 +14,9 @@ internal class GsakConsumer(
         private val baseUrl: String,
         private val stsConsumer: StsConsumer
 ) {
-    fun hentGsak(sakId: String, aktoerId: String, correlationId: String): String {
+    fun hentGsak(sakId: String, aktørId: String, correlationId: String): String {
         val (_, _, result) = "$baseUrl/saker".httpGet(listOf(
-                "aktoerId" to aktoerId,
+                "aktoerId" to aktørId,
                 "applikasjon" to "SU-GSAK",
                 "tema" to "SU",
                 "fagsakNr" to sakId
@@ -30,22 +30,22 @@ internal class GsakConsumer(
                 { json ->
                     JSONArray(json).let {
                         when (it.isEmpty) {
-                            true -> opprettGsak(sakId, aktoerId, correlationId)
+                            true -> opprettGsak(sakId, aktørId, correlationId)
                             else -> JSONObject(it.first()).getString("id")
                         }
                     }
                 },
-                { throw GsakConsumerException("Could not get resource in GSAK for fagsak: $sakId, aktoer: $aktoerId, $xCorrelationId:$correlationId, error: $it") }
+                { throw GsakConsumerException("Could not get resource in GSAK for fagsak: $sakId, aktoer: $aktørId, $xCorrelationId:$correlationId, error: $it") }
         )
     }
 
-    private fun opprettGsak(sakId: String, aktoerId: String, correlationId: String): String {
+    private fun opprettGsak(sakId: String, aktørId: String, correlationId: String): String {
         val (_, _, result) = "$baseUrl/saker".httpPost()
                 .jsonBody("""
                     {
                         "tema":"SU",
                         "applikasjon":"SU-GSAK",
-                        "aktoerId":"$aktoerId",
+                        "aktoerId":"$aktørId",
                         "fagsakNr":"$sakId"
                     }
                 """.trimIndent())
@@ -56,7 +56,7 @@ internal class GsakConsumer(
 
         return result.fold(
                 { JSONObject(it).getString("id") },
-                { throw GsakConsumerException("Could not create resource in GSAK for fagsak: $sakId, aktoer: $aktoerId, $xCorrelationId:$correlationId, error: $it") }
+                { throw GsakConsumerException("Could not create resource in GSAK for fagsak: $sakId, aktoer: $aktørId, $xCorrelationId:$correlationId, error: $it") }
         )
     }
 }

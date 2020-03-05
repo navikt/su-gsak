@@ -80,7 +80,7 @@ internal fun Application.suGsak(
                         if (useGSak) {
                             val correlationId = it.second.getOrDefault(xCorrelationId, UUID.randomUUID().toString())
                             val gsakId = gsakConsumer.hentGsak(message.sakId, message.aktørId, correlationId)
-                            kafkaProducer.send(message.asSkygge(gsakId).toProducerRecord(SOKNAD_TOPIC, it.second))
+                            kafkaProducer.send(message.medSkyggesak(gsakId).toProducerRecord(SOKNAD_TOPIC, it.second))
                             messageProcessed()
                         } else {
                             LOG.info(message.toString())
@@ -94,8 +94,6 @@ internal fun Application.suGsak(
         }
     }
 }
-
-private fun NySøknad.asSkygge(gsakId: String) = NySøknadMedSkyggesak(sakId = sakId, aktørId = aktørId, søknadId = søknadId, søknad = søknad, fnr = fnr, gsakId = gsakId)
 
 fun ConsumerRecord<String, String>.logMessage() {
     LOG.info("Polled message: topic:${this.topic()}, key:${this.key()}, value:${this.value()}: $xCorrelationId:${this.headersAsString()[xCorrelationId]}")

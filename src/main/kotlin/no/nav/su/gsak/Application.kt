@@ -11,11 +11,11 @@ import no.nav.su.gsak.Metrics.messageProcessed
 import no.nav.su.gsak.Metrics.messageRead
 import no.nav.su.gsak.Metrics.messageSkipped
 import no.nav.su.gsak.Metrics.messageUnknownFormat
-import no.nav.su.meldinger.kafka.MessageBuilder.Companion.fromConsumerRecord
-import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
 import no.nav.su.meldinger.kafka.headersAsString
+import no.nav.su.meldinger.kafka.soknad.KafkaMessage.Companion.toProducerRecord
 import no.nav.su.meldinger.kafka.soknad.NySoknad
 import no.nav.su.meldinger.kafka.soknad.NySoknadMedSkyggesak
+import no.nav.su.meldinger.kafka.soknad.SoknadMelding.Companion.fromConsumerRecord
 import no.nav.su.meldinger.kafka.soknad.UkjentFormat
 import no.nav.su.person.sts.StsConsumer
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -84,11 +84,12 @@ internal fun Application.sugsak(
                                                 it.headersAsString().getOrDefault(xCorrelationId, UUID.randomUUID().toString()))
                                                 .also { gsakId ->
                                                     kafkaProducer.send(NySoknadMedSkyggesak(
-                                                            message.sakId,
-                                                            message.aktoerId,
-                                                            message.soknadId,
-                                                            message.soknad,
-                                                            gsakId
+                                                            sakId = message.sakId,
+                                                            aktoerId = message.aktoerId,
+                                                            soknadId = message.soknadId,
+                                                            soknad = message.soknad,
+                                                            fnr = message.fnr,
+                                                            gsakId = gsakId
                                                     ).toProducerRecord(SOKNAD_TOPIC, it.headersAsString()))
                                                 }.also {
                                                     messageProcessed()

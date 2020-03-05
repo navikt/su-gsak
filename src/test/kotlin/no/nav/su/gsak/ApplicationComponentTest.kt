@@ -14,11 +14,11 @@ import no.nav.common.KafkaEnvironment
 import no.nav.su.gsak.EmbeddedKafka.Companion.embeddedKafka
 import no.nav.su.gsak.EmbeddedKafka.Companion.testKafkaConsumer
 import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
-import no.nav.su.meldinger.kafka.MessageBuilder.Companion.fromConsumerRecord
-import no.nav.su.meldinger.kafka.MessageBuilder.Companion.toProducerRecord
 import no.nav.su.meldinger.kafka.headersAsString
+import no.nav.su.meldinger.kafka.soknad.KafkaMessage.Companion.toProducerRecord
 import no.nav.su.meldinger.kafka.soknad.NySoknad
 import no.nav.su.meldinger.kafka.soknad.NySoknadMedSkyggesak
+import no.nav.su.meldinger.kafka.soknad.SoknadMelding.Companion.fromConsumerRecord
 import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.common.serialization.StringSerializer
@@ -37,6 +37,7 @@ class ApplicationComponentTest {
     private val aktoerId = "aktoerId"
     private val correlationId = "correlationId"
     private val soknad = """{"key":"value"}"""
+    private val fnr = "12345678910"
     private lateinit var embeddedKafka: KafkaEnvironment
     private lateinit var adminClient: AdminClient
 
@@ -57,7 +58,8 @@ class ApplicationComponentTest {
                     sakId = sakId,
                     aktoerId = aktoerId,
                     soknadId = soknadId,
-                    soknad = soknad
+                    soknad = soknad,
+                    fnr = fnr
             ).toProducerRecord(SOKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
 
             Thread.sleep(500)
@@ -98,7 +100,8 @@ class ApplicationComponentTest {
                     sakId = sakId,
                     aktoerId = aktoerId,
                     soknadId = soknadId,
-                    soknad = soknad
+                    soknad = soknad,
+                    fnr = fnr
             ).toProducerRecord(SOKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
 
             Thread.sleep(500)

@@ -9,14 +9,11 @@ import kotlinx.coroutines.launch
 import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
 import no.nav.su.gsak.Metrics.messageProcessed
 import no.nav.su.gsak.Metrics.messageRead
-import no.nav.su.gsak.Metrics.messageSkipped
-import no.nav.su.gsak.Metrics.messageUnknownFormat
 import no.nav.su.meldinger.kafka.headersAsString
 import no.nav.su.meldinger.kafka.soknad.KafkaMessage.Companion.toProducerRecord
 import no.nav.su.meldinger.kafka.soknad.NySoknad
 import no.nav.su.meldinger.kafka.soknad.NySoknadMedSkyggesak
 import no.nav.su.meldinger.kafka.soknad.SoknadMelding.Companion.fromConsumerRecord
-import no.nav.su.meldinger.kafka.soknad.UkjentFormat
 import no.nav.su.person.sts.StsConsumer
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.KafkaConsumer
@@ -68,48 +65,30 @@ internal fun Application.sugsak(
         LOG.error("Shutdown hook initiated - exiting application")
     }))
 
+    val useGSak = environment.config.getProperty("gsak.enabled").toBoolean()
+
     launch {
         try {
             while (this.isActive) {
                 kafkaConsumer.poll(of(100, MILLIS))
-                        .map {
-                            it.logMessage()
-                            messageRead()
-                            when (val message = fromConsumerRecord(it)) {
-                                is NySoknad -> {
-                                    if (environment.config.getProperty("gsak.enabled").toBoolean()) {
-                                        gsakConsumer.hentGsak(
-                                                message.sakId,
-                                                message.aktoerId,
-                                                it.headersAsString().getOrDefault(xCorrelationId, UUID.randomUUID().toString()))
-                                                .also { gsakId ->
-                                                    kafkaProducer.send(NySoknadMedSkyggesak(
-                                                            sakId = message.sakId,
-                                                            aktoerId = message.aktoerId,
-                                                            soknadId = message.soknadId,
-                                                            soknad = message.soknad,
-                                                            fnr = message.fnr,
-                                                            gsakId = gsakId
-                                                    ).toProducerRecord(SOKNAD_TOPIC, it.headersAsString()))
-                                                }.also {
-                                                    messageProcessed()
-                                                }
-                                    } else {
-                                        LOG.info("Processed message of type:${message::class}, message:$message")
-                                        messageProcessed()
-                                    }
-                                }
-                                is UkjentFormat -> {
-                                    LOG.warn("Unknown message format of type:${message::class}, message:$message")
-                                    messageUnknownFormat()
-                                    messageSkipped()
-                                }
-                                else -> {
-                                    LOG.info("Skipping message of type:${message::class}")
-                                    messageSkipped()
-                                }
-                            }
+                    .onEach {
+                        it.logMessage()
+                        messageRead()
+                    }
+                    .filter { fromConsumerRecord(it) is NySoknad }
+                    .map { Pair(fromConsumerRecord(it) as NySoknad, it.headersAsString()) }
+                    .forEach {
+                        val message = it.first
+                        if (useGSak) {
+                            val correlationId = it.second.getOrDefault(xCorrelationId, UUID.randomUUID().toString())
+                            val gsakId = gsakConsumer.hentGsak(message.sakId, message.aktoerId, correlationId)
+                            kafkaProducer.send(message.asSkygge(gsakId).toProducerRecord(SOKNAD_TOPIC, it.second))
+                            messageProcessed()
+                        } else {
+                            LOG.info(message.toString())
+                            messageProcessed()
                         }
+                    }
             }
         } catch (e: Exception) {
             LOG.error("Exception caught while processing kafka message: ", e)
@@ -117,6 +96,8 @@ internal fun Application.sugsak(
         }
     }
 }
+
+private fun NySoknad.asSkygge(gsakId: String) = NySoknadMedSkyggesak(sakId = sakId, aktoerId = aktoerId, soknadId = soknadId, soknad = soknad, fnr = fnr, gsakId = gsakId)
 
 fun ConsumerRecord<String, String>.logMessage() {
     LOG.info("Polled message: topic:${this.topic()}, key:${this.key()}, value:${this.value()}: $xCorrelationId:${this.headersAsString()[xCorrelationId]}")

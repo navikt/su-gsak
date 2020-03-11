@@ -6,11 +6,8 @@ import io.ktor.util.KtorExperimentalAPI
 import io.prometheus.client.CollectorRegistry
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import no.nav.su.meldinger.kafka.Meldingsleser
 import no.nav.su.meldinger.kafka.Topics.SØKNAD_TOPIC
 import no.nav.su.meldinger.kafka.soknad.NySøknad
-import org.apache.kafka.clients.producer.KafkaProducer
-import org.apache.kafka.common.serialization.StringSerializer
 import org.slf4j.LoggerFactory
 import kotlin.system.exitProcess
 
@@ -33,19 +30,14 @@ internal fun Application.suGsak(
     installMetrics(collectorRegistry)
     naisRoutes(collectorRegistry)
 
-    val kafkaConfig = KafkaConfigBuilder(environment.config)
-    val kafkaProducer = KafkaProducer<String, String>(
-            kafkaConfig.producerConfig(),
-            StringSerializer(),
-            StringSerializer()
-    )
+    val kafkaProducer = environment.config.kafkaMiljø().producer()
 
     Runtime.getRuntime().addShutdownHook(Thread(Runnable {
         LOG.error("Shutdown hook initiated - exiting application")
     }))
 
     val useGSak = environment.config.getProperty("gsak.enabled").toBoolean()
-    val meldingsleser = Meldingsleser(environment.config.kafkaMiljø(), Metrics)
+    val meldingsleser = environment.config.kafkaMiljø().meldingsleser(Metrics)
     launch {
         try {
             while (this.isActive) {

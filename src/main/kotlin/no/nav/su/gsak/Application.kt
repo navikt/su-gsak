@@ -78,7 +78,7 @@ internal fun Application.suGsak(
                     .map { fromConsumerRecord(it) as NySøknad }
                     .forEach {message ->
                         if (useGSak) {
-                            val gsakId = gsakConsumer.hentGsak(message.sakId, message.aktørId, message.correlationId)
+                            val gsakId = gsakConsumer.hentGsak(message)
                             kafkaProducer.send(message.medSkyggesak(gsakId).toProducerRecord(SØKNAD_TOPIC))
                             messageProcessed()
                         } else {

@@ -6,6 +6,7 @@ import com.github.kittinunf.fuel.httpGet
 import com.github.kittinunf.fuel.httpPost
 import io.ktor.http.ContentType.Application.Json
 import io.ktor.http.HttpHeaders.Accept
+import no.nav.su.meldinger.kafka.soknad.NySøknad
 import no.nav.su.person.sts.StsConsumer
 import org.json.JSONArray
 import org.json.JSONObject
@@ -14,7 +15,8 @@ internal class GsakConsumer(
         private val baseUrl: String,
         private val stsConsumer: StsConsumer
 ) {
-    fun hentGsak(sakId: String, aktørId: String, correlationId: String): String {
+    fun hentGsak(message: NySøknad) = hentGsak(message.sakId, message.aktørId, message.correlationId)
+    private fun hentGsak(sakId: String, aktørId: String, correlationId: String): String {
         val (_, _, result) = "$baseUrl/saker".httpGet(listOf(
                 "aktoerId" to aktørId,
                 "applikasjon" to "SU-GSAK",

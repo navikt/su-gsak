@@ -1,10 +1,10 @@
-package no.nav.su.person.sts
+package no.nav.su.gsak
 
 import com.github.kittinunf.fuel.core.extensions.authentication
 import com.github.kittinunf.fuel.httpGet
 import io.ktor.http.ContentType.Application.Json
 import io.ktor.http.HttpHeaders.Accept
-import no.nav.su.person.sts.StsToken.Companion.isValid
+import no.nav.su.gsak.StsToken.Companion.isValid
 import org.json.JSONObject
 import java.time.LocalDateTime
 

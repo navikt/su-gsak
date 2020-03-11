@@ -7,7 +7,6 @@ import com.github.kittinunf.fuel.httpPost
 import io.ktor.http.ContentType.Application.Json
 import io.ktor.http.HttpHeaders.Accept
 import no.nav.su.meldinger.kafka.soknad.NySøknad
-import no.nav.su.person.sts.StsConsumer
 import org.json.JSONArray
 import org.json.JSONObject
 

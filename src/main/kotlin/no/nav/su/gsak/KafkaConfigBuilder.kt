@@ -2,6 +2,7 @@ package no.nav.su.gsak
 
 import io.ktor.config.ApplicationConfig
 import io.ktor.util.KtorExperimentalAPI
+import no.nav.su.meldinger.kafka.KafkaMiljø
 import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
@@ -11,6 +12,16 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.util.*
 
+@KtorExperimentalAPI
+fun ApplicationConfig.kafkaMiljø() = KafkaMiljø(
+    groupId = getProperty("kafka.groupId"),
+    username = getProperty("kafka.username"),
+    password = getProperty("kafka.password"),
+    trustStorePath = getProperty("kafka.username"),
+    trustStorePassword = getProperty("kafka.trustStorePassword"),
+    commitInterval = getProperty("kafka.commitInterval"),
+    bootstrap = getProperty("kafka.bootstrap")
+)
 
 @KtorExperimentalAPI
 internal class KafkaConfigBuilder(
@@ -21,13 +32,6 @@ internal class KafkaConfigBuilder(
     fun producerConfig() = kafkaBaseConfig().apply {
         put(ProducerConfig.ACKS_CONFIG, "all")
         put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, "1")
-    }
-
-    fun consumerConfig() = kafkaBaseConfig().apply {
-        put(ConsumerConfig.GROUP_ID_CONFIG, env.getProperty("kafka.groupId"))
-        put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true")
-        put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, env.getProperty("kafka.commitInterval"))
-        put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
     }
 
     private fun kafkaBaseConfig() = Properties().apply {

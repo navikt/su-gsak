@@ -45,7 +45,7 @@ dependencies {
     implementation("io.ktor:ktor-metrics-micrometer:$ktorVersion")
     implementation("io.micrometer:micrometer-registry-prometheus:$micrometerRegistryPrometheusVersion")
     implementation("org.apache.kafka:kafka-streams:2.3.0")
-    implementation("no.nav:su-meldinger:77ec71b7f739c3bff49ef51de6bab559153f3d29")
+    implementation("no.nav:su-meldinger:8a5917714af2bcdb854d1e76923263b9b20d7f50")
 
     testImplementation("io.ktor:ktor-server-test-host:$ktorVersion") {
         exclude(group = "junit")

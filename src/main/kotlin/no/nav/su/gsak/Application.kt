@@ -8,9 +8,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import no.nav.su.meldinger.kafka.Meldingsleser
 import no.nav.su.meldinger.kafka.Topics.SØKNAD_TOPIC
-import no.nav.su.meldinger.kafka.headersAsString
 import no.nav.su.meldinger.kafka.soknad.NySøknad
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.KafkaProducer
 import org.apache.kafka.common.serialization.StringSerializer
 import org.slf4j.LoggerFactory
@@ -65,10 +63,6 @@ internal fun Application.suGsak(
             exitProcess(1)
         }
     }
-}
-
-fun ConsumerRecord<String, String>.logMessage() {
-    LOG.info("Polled message: topic:${this.topic()}, key:${this.key()}, value:${this.value()}: $xCorrelationId:${this.headersAsString()[xCorrelationId]}")
 }
 
 fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)

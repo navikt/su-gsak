@@ -53,12 +53,13 @@ class ApplicationComponentTest {
             stubFor(gsakCreated)
 
             producer.send(NySøknad(
+                    correlationId = correlationId,
                     sakId = sakId,
                     aktørId = aktørId,
                     søknadId = søknadId,
                     søknad = søknad,
                     fnr = fnr
-            ).toProducerRecord(SØKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
+            ).toProducerRecord(SØKNAD_TOPIC))
 
             Thread.sleep(500)
 
@@ -95,12 +96,13 @@ class ApplicationComponentTest {
             stubFor(gsakError)
 
             producer.send(NySøknad(
+                    correlationId = correlationId,
                     sakId = sakId,
                     aktørId = aktørId,
                     søknadId = søknadId,
                     søknad = søknad,
                     fnr = fnr
-            ).toProducerRecord(SØKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
+            ).toProducerRecord(SØKNAD_TOPIC))
 
             Thread.sleep(500)
 

@@ -12,6 +12,7 @@ import no.nav.su.meldinger.kafka.Topics.SØKNAD_TOPIC
 import no.nav.su.meldinger.kafka.headersAsString
 import no.nav.su.meldinger.kafka.soknad.NySøknad
 import no.nav.su.meldinger.kafka.soknad.NySøknadMedSkyggesak
+import no.nav.su.meldinger.kafka.soknad.SøknadMelding
 import no.nav.su.meldinger.kafka.soknad.SøknadMelding.Companion.fromConsumerRecord
 import no.nav.su.person.sts.StsConsumer
 import org.apache.kafka.clients.consumer.ConsumerRecord
@@ -74,13 +75,11 @@ internal fun Application.suGsak(
                         messageRead()
                     }
                     .filter { fromConsumerRecord(it) is NySøknad }
-                    .map { Pair(fromConsumerRecord(it) as NySøknad, it.headersAsString()) }
-                    .forEach {
-                        val message = it.first
+                    .map { fromConsumerRecord(it) as NySøknad }
+                    .forEach {message ->
                         if (useGSak) {
-                            val correlationId = it.second.getOrDefault(xCorrelationId, UUID.randomUUID().toString())
-                            val gsakId = gsakConsumer.hentGsak(message.sakId, message.aktørId, correlationId)
-                            kafkaProducer.send(message.medSkyggesak(gsakId).toProducerRecord(SØKNAD_TOPIC, it.second))
+                            val gsakId = gsakConsumer.hentGsak(message.sakId, message.aktørId, message.correlationId)
+                            kafkaProducer.send(message.medSkyggesak(gsakId).toProducerRecord(SØKNAD_TOPIC))
                             messageProcessed()
                         } else {
                             LOG.info(message.toString())

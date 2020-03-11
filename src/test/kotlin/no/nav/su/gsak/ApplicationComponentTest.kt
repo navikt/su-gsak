@@ -13,7 +13,7 @@ import io.ktor.util.KtorExperimentalAPI
 import no.nav.common.KafkaEnvironment
 import no.nav.su.gsak.EmbeddedKafka.Companion.embeddedKafka
 import no.nav.su.gsak.EmbeddedKafka.Companion.testKafkaConsumer
-import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
+import no.nav.su.meldinger.kafka.Topics.SØKNAD_TOPIC
 import no.nav.su.meldinger.kafka.headersAsString
 import no.nav.su.meldinger.kafka.soknad.NySøknad
 import no.nav.su.meldinger.kafka.soknad.NySøknadMedSkyggesak
@@ -58,13 +58,13 @@ class ApplicationComponentTest {
                     søknadId = søknadId,
                     søknad = søknad,
                     fnr = fnr
-            ).toProducerRecord(SOKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
+            ).toProducerRecord(SØKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
 
             Thread.sleep(500)
 
             val records = testKafkaConsumer(embeddedKafka.brokersURL)
                     .poll(of(100, MILLIS))
-                    .records(SOKNAD_TOPIC)
+                    .records(SØKNAD_TOPIC)
 
             verify(exactly(1), getRequestedFor(urlPathEqualTo("/rest/v1/sts/token")))
             verify(exactly(1), getRequestedFor(urlPathEqualTo("/saker")))
@@ -100,7 +100,7 @@ class ApplicationComponentTest {
                     søknadId = søknadId,
                     søknad = søknad,
                     fnr = fnr
-            ).toProducerRecord(SOKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
+            ).toProducerRecord(SØKNAD_TOPIC, mapOf(xCorrelationId to correlationId)))
 
             Thread.sleep(500)
 

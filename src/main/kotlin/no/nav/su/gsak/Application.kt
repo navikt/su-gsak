@@ -6,9 +6,9 @@ import io.ktor.util.KtorExperimentalAPI
 import io.prometheus.client.CollectorRegistry
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import no.nav.su.gsak.KafkaConfigBuilder.Topics.SOKNAD_TOPIC
 import no.nav.su.gsak.Metrics.messageProcessed
 import no.nav.su.gsak.Metrics.messageRead
+import no.nav.su.meldinger.kafka.Topics.SØKNAD_TOPIC
 import no.nav.su.meldinger.kafka.headersAsString
 import no.nav.su.meldinger.kafka.soknad.NySøknad
 import no.nav.su.meldinger.kafka.soknad.NySøknadMedSkyggesak
@@ -50,7 +50,7 @@ internal fun Application.suGsak(
             StringDeserializer(),
             StringDeserializer()
     ).also {
-        it.subscribe(listOf(SOKNAD_TOPIC))
+        it.subscribe(listOf(SØKNAD_TOPIC))
     }
 
     val kafkaProducer = KafkaProducer<String, String>(
@@ -80,7 +80,7 @@ internal fun Application.suGsak(
                         if (useGSak) {
                             val correlationId = it.second.getOrDefault(xCorrelationId, UUID.randomUUID().toString())
                             val gsakId = gsakConsumer.hentGsak(message.sakId, message.aktørId, correlationId)
-                            kafkaProducer.send(message.medSkyggesak(gsakId).toProducerRecord(SOKNAD_TOPIC, it.second))
+                            kafkaProducer.send(message.medSkyggesak(gsakId).toProducerRecord(SØKNAD_TOPIC, it.second))
                             messageProcessed()
                         } else {
                             LOG.info(message.toString())

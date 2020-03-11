@@ -54,7 +54,4 @@ internal class KafkaConfigBuilder(
             }
     }
 
-    object Topics {
-        const val SOKNAD_TOPIC = "privat-su-soknad"
-    }
 }

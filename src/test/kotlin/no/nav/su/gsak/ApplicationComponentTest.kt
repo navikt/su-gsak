@@ -46,8 +46,7 @@ class ApplicationComponentTest {
             testEnv(wireMockServer.baseUrl(), embeddedKafka.brokersURL)
             suGsak()
         }) {
-            val kafkaConfig = KafkaConfigBuilder(environment.config)
-            val producer = KafkaProducer(kafkaConfig.producerConfig(), StringSerializer(), StringSerializer())
+            val producer = environment.config.kafkaMiljø().producer()
 
             stubFor(noExistingGsak)
             stubFor(gsakCreated)
@@ -90,8 +89,7 @@ class ApplicationComponentTest {
             testEnv(wireMockServer.baseUrl(), embeddedKafka.brokersURL)
             suGsak()
         }) {
-            val kafkaConfig = KafkaConfigBuilder(environment.config)
-            val producer = KafkaProducer(kafkaConfig.producerConfig(), StringSerializer(), StringSerializer())
+            val producer = environment.config.kafkaMiljø().producer()
 
             stubFor(gsakError)
 
